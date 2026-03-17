@@ -54,5 +54,5 @@ python train_dual_finetune.py \
   --backbone convnext_tiny \
   --epochs 10 \
   --batch-size 64 \
-  --device cpu
+  --device gpu
 ```

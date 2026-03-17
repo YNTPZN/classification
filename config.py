@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-# Data paths (relative to this file: cropping/ -> Classification/ -> Data/)
+# Data paths (relative to this file: cropping/ -> Classification/ -> Dataset/)
 _SCRIPT_DIR = Path(__file__).resolve().parent
-DATA_ROOT = _SCRIPT_DIR.parent / "Data"
+DATA_ROOT = _SCRIPT_DIR.parent / "Dataset"
 GOOD_FOLDER = "good"
 DEFECT_PREFIX = "defect"  # All folders starting with "defect" are abnormal
 

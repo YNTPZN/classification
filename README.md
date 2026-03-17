@@ -8,13 +8,19 @@ pip install -r requirements.txt
 
 ## Commands
 
-### Train
+### Train (good vs defect)
 
 ```bash
 python train.py
 ```
 
-### Screen
+### Global train/test split (on Dataset/)
+
+```bash
+python split_dataset.py
+```
+
+### Screen (good vs defect)
 
 ```bash
 python screen.py --image /path/to/image.png
@@ -55,4 +61,23 @@ python train_dual_finetune.py \
   --epochs 10 \
   --batch-size 64 \
   --device gpu
+```
+### Evaluate dual model (image-level subclasses on defect images)
+
+```bash
+
+
+python eval_dual_image.py \
+  --tight-dir output/cropped_defects_tight_pad04 \
+  --context-dir output/cropped_defects_context_pad04 \
+  --ckpt output/dual_finetune.pt \
+  --backbone convnext_tiny \
+  --batch-size 64 \
+  --device cpu
+```
+
+### End-to-end evaluation (good + subclasses) on test split
+
+```bash
+python eval_end2end.py --device cpu
 ```

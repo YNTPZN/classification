@@ -27,3 +27,6 @@ RANDOM_SEED = 42
 
 # Supported image extensions
 IMG_EXTENSIONS = {".png", ".PNG", ".jpg", ".jpeg", ".JPG", ".JPEG"}
+
+# Classification: P(defect) >= DEFECT_THRESHOLD -> defect
+DEFECT_THRESHOLD = 0.4

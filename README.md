@@ -56,6 +56,26 @@ python screen.py
   - `*_defect_heatmap.png` - Defect region heatmap
 - Bounding box coordinates for suspicious regions
 
+### 4. Few-Shot Defect Classification (on cropped patches)
+
+After cropping defect regions (`python defect_crop.py`), classify crop images into defect subclasses using DINOv2 features + ProtoNet / cosine / kNN:
+
+```bash
+# ProtoNet (nearest prototype, default)
+python fewshot_classifier.py
+
+# Cosine classifier
+python fewshot_classifier.py --method cosine
+
+# k-NN
+python fewshot_classifier.py --method knn --k 5
+```
+
+- **Data**: `output/cropped_defects/defect1/`, `defect2/`, ... (folder name = label)
+- **Backbone**: DINOv2 ViT-B/14 (pretrained, no fine-tuning)
+- **Methods**: ProtoNet (class prototype mean), cosine similarity, k-NN
+- **Save prototypes**: `python fewshot_classifier.py --save-prototypes`
+
 ## Configuration
 
 Edit `config.py` to modify:

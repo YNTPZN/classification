@@ -26,6 +26,7 @@ from config import (
     MODEL_NAME,
     IMG_SIZE,
     IMG_EXTENSIONS,
+    DEFECT_THRESHOLD,
 )
 from dataset import load_dataset, get_image_paths, DefectDataset
 from model import build_classifier, get_feature_layer
@@ -62,7 +63,7 @@ def screen_image(model, gradcam, img_path: Path, transform, device, save_dir: Pa
     with torch.no_grad():
         logits = model(img_tensor)
         probs = F.softmax(logits, dim=1)
-        pred = logits.argmax(dim=1).item()
+        pred = 1 if probs[0, 1].item() >= DEFECT_THRESHOLD else 0
         conf = probs[0, pred].item()
     
     cam = None

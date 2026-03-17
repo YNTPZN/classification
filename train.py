@@ -27,6 +27,9 @@ from config import (
     RANDOM_SEED,
 )
 from dataset import load_dataset, DefectDataset
+
+
+TRAIN_LIST = OUTPUT_DIR / "train_images.txt"
 from model import build_classifier
 
 
@@ -82,6 +85,18 @@ def main():
     
     # Load data
     samples, label_names = load_dataset(args.data, GOOD_FOLDER, DEFECT_PREFIX)
+
+    # If a global train split exists, restrict samples to that subset
+    if TRAIN_LIST.exists():
+        with TRAIN_LIST.open("r") as f:
+            rel_train = {Path(line.strip()) for line in f if line.strip()}
+        filtered = []
+        for path, label in samples:
+            rel = path.relative_to(args.data)
+            if rel in rel_train:
+                filtered.append((path, label))
+        print(f"Using global train split: {len(filtered)} / {len(samples)} samples")
+        samples = filtered
     print(f"Total samples: {len(samples)}")
     n_good = sum(1 for _, l in samples if l == 0)
     n_defect = sum(1 for _, l in samples if l == 1)

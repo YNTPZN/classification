@@ -30,6 +30,7 @@ from gradcam import GradCAM, draw_defect_boxes
 
 CROPPED_DIR = OUTPUT_DIR / "cropped_defects"
 CONTEXT_DIR = OUTPUT_DIR / "cropped_defects_context"
+TRAIN_LIST = OUTPUT_DIR / "train_images.txt"
 
 
 def get_transform():
@@ -159,6 +160,16 @@ def main():
 
     args.output.mkdir(parents=True, exist_ok=True)
 
+    # Determine which defect images to process
+    train_defect_paths = None
+    if TRAIN_LIST.exists():
+        with TRAIN_LIST.open("r") as f:
+            rel_train = [Path(line.strip()) for line in f if line.strip()]
+        # Keep only defect folders from the global train list
+        train_defect_paths = {
+            args.data / rel for rel in rel_train if rel.parts and rel.parts[0].startswith(DEFECT_PREFIX)
+        }
+
     if args.input_dir:
         folders = [args.input_dir]
     else:
@@ -177,7 +188,10 @@ def main():
     for folder in folders:
         paths = []
         for ext in IMG_EXTENSIONS:
-            paths.extend(folder.glob(f"*{ext}"))
+            for p in folder.glob(f"*{ext}"):
+                if train_defect_paths is not None and p not in train_defect_paths:
+                    continue
+                paths.append(p)
         paths = sorted(paths)
 
         if not paths:

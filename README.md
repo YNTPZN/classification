@@ -8,16 +8,16 @@ pip install -r requirements.txt
 
 ## Commands
 
-### Train (good vs defect)
-
-```bash
-python train.py
-```
-
 ### Global train/test split (on Dataset/)
 
 ```bash
 python split_dataset.py
+```
+
+### Train (good vs defect)
+
+```bash
+python train.py
 ```
 
 ### Screen (good vs defect)

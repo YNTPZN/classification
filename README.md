@@ -79,5 +79,5 @@ python eval_dual_image.py \
 ### End-to-end evaluation (good + subclasses) on test split
 
 ```bash
-python eval_end2end.py --device cpu
+python eval_end2end.py --device cuda
 ```

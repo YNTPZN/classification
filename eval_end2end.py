@@ -150,6 +150,12 @@ def main():
     defect_per_cls = Counter()
     defect_per_cls_ok = Counter()
 
+    # Multiclass metrics on final label space: {good} + defect subclasses + defect_unknown
+    class_names = ["good"] + list(label_names) + ["defect_unknown"]
+    y_true = []
+    y_pred = []
+    unknown_idx = 1 + len(label_names)
+
     for i, rel in enumerate(rel_paths):
         img_path = args.dataset_root / rel
         # Determine true label: good or defectX
@@ -182,6 +188,7 @@ def main():
         if pred_bin == 0:
             # Predicted good
             pred_label = "good"
+            pred_class_idx = 0
         else:
             # Predicted defect: run Grad-CAM to get boxes
             x_grad = transform(img).unsqueeze(0).to(device)
@@ -216,8 +223,10 @@ def main():
 
             if pred_sub is None:
                 pred_label = "defect_unknown"
+                pred_class_idx = unknown_idx
             else:
                 pred_label = label_names[pred_sub]
+                pred_class_idx = 1 + pred_sub
                 if true_sub is not None:
                     defect_per_cls[true_sub] += 1
                     if pred_sub == true_sub:
@@ -225,13 +234,21 @@ def main():
 
         # Overall correctness on full label space (good + subclasses)
         if cls_name == "good":
+            true_class_idx = 0
             overall_total += 1
             if pred_label == "good":
                 overall_correct += 1
         else:
             overall_total += 1
+            if true_sub is None:
+                true_class_idx = unknown_idx
+            else:
+                true_class_idx = 1 + true_sub
             if pred_label == cls_name:
                 overall_correct += 1
+
+        y_true.append(true_class_idx)
+        y_pred.append(pred_class_idx)
 
         if (i + 1) % 50 == 0 or (i + 1) == len(rel_paths):
             print(f"Processed {i+1}/{len(rel_paths)} images...", flush=True)
@@ -258,6 +275,23 @@ def main():
         if idx in defect_per_cls:
             acc = defect_per_cls_ok[idx] / max(1, defect_per_cls[idx])
             print(f"  {name}: {acc:.4f}")
+
+    # Multiclass precision/recall/F1 with support
+    y_true = np.array(y_true, dtype=np.int64)
+    y_pred = np.array(y_pred, dtype=np.int64)
+    print("\nMulticlass precision/recall/F1 (image-level):")
+    for c, cname in enumerate(class_names):
+        tp = int(((y_pred == c) & (y_true == c)).sum())
+        fp = int(((y_pred == c) & (y_true != c)).sum())
+        fn = int(((y_pred != c) & (y_true == c)).sum())
+        support = int((y_true == c).sum())
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+        print(
+            f"  {cname}: precision={precision:.4f}, recall={recall:.4f}, "
+            f"f1={f1:.4f}, support={support}"
+        )
 
     return 0
 

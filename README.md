@@ -60,24 +60,22 @@ python train_dual_finetune.py \
   --backbone convnext_tiny \
   --epochs 10 \
   --batch-size 64 \
-  --device cuda
+  --device gpu
 ```
 ### Evaluate dual model (image-level subclasses on defect images)
 
 ```bash
-
-
 python eval_dual_image.py \
   --tight-dir output/cropped_defects_tight_pad04 \
   --context-dir output/cropped_defects_context_pad04 \
   --ckpt output/dual_finetune.pt \
   --backbone convnext_tiny \
   --batch-size 64 \
-  --device cuda
+  --device gpu
 ```
 
 ### End-to-end evaluation (good + subclasses) on test split
 
 ```bash
-python eval_end2end.py --device cuda
+python eval_end2end.py --device cpu
 ```

@@ -48,12 +48,13 @@ def make_balanced_sampler(labels: np.ndarray) -> WeightedRandomSampler:
 
 
 @torch.no_grad()
-def evaluate(model, loader, device):
+def evaluate(model, loader, device, n_classes: int):
     model.eval()
+    all_true = []
+    all_pred = []
     correct = 0
     total = 0
-    per_cls = Counter()
-    per_cls_ok = Counter()
+
     for (x1, x2), y, _ in loader:
         x1 = x1.to(device)
         x2 = x2.to(device)
@@ -62,11 +63,30 @@ def evaluate(model, loader, device):
         pred = logits.argmax(dim=1)
         correct += (pred == y).sum().item()
         total += y.size(0)
-        for yi, pi in zip(y.cpu().tolist(), pred.cpu().tolist()):
-            per_cls[yi] += 1
-            per_cls_ok[yi] += int(yi == pi)
+        all_true.append(y.detach().cpu().numpy())
+        all_pred.append(pred.detach().cpu().numpy())
+
     acc = correct / max(1, total)
-    return acc, {c: per_cls_ok[c] / max(1, per_cls[c]) for c in per_cls}
+
+    all_true = np.concatenate(all_true) if all_true else np.array([], dtype=np.int64)
+    all_pred = np.concatenate(all_pred) if all_pred else np.array([], dtype=np.int64)
+    class_metrics = {}
+    for c in range(n_classes):
+        tp = int(((all_pred == c) & (all_true == c)).sum())
+        fp = int(((all_pred == c) & (all_true != c)).sum())
+        fn = int(((all_pred != c) & (all_true == c)).sum())
+        support = int((all_true == c).sum())
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+        class_metrics[c] = {
+            "precision": precision,
+            "recall": recall,
+            "f1": f1,
+            "support": support,
+        }
+
+    return acc, class_metrics
 
 
 def main():
@@ -145,7 +165,7 @@ def main():
             opt.step()
             total_loss += loss.item()
 
-        val_acc, _ = evaluate(model, val_loader, device)
+        val_acc, _ = evaluate(model, val_loader, device, n_classes)
         print(f"Epoch {epoch+1}: loss={total_loss/max(1,len(train_loader)):.4f} | val_acc={val_acc:.4f}")
 
         if val_acc > best_val:
@@ -159,12 +179,16 @@ def main():
             print(f"  -> saved best to {args.save}")
 
     print("\nBest val acc:", best_val)
-    test_acc, per = evaluate(model, test_loader, device)
+    test_acc, per_metrics = evaluate(model, test_loader, device, n_classes)
     print("Test acc:", test_acc)
-    print("Per-class (test):")
+    print("\nPer-class metrics (test):")
     for i, name in enumerate(label_names):
-        if i in per:
-            print(f"  {name}: {per[i]:.4f}")
+        if i in per_metrics:
+            m = per_metrics[i]
+            print(
+                f"  {name}: precision={m['precision']:.4f}, recall={m['recall']:.4f}, "
+                f"f1={m['f1']:.4f}, support={m['support']}"
+            )
     return 0
 
 

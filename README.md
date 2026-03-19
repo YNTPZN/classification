@@ -46,7 +46,7 @@ python plot_score_dist.py
 python eval_metrics.py
 ```
 
-### Few-shot (DINOv2 features)
+### Few-shot (DINOv2 features) No need
 
 ```bash
 python fewshot_classifier.py --method knn --k 1 --knn-metric cosine --split-by-image --stratified

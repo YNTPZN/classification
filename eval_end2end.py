@@ -20,6 +20,7 @@ Outputs:
 import argparse
 from pathlib import Path
 from collections import Counter
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -107,6 +108,13 @@ def main():
     p.add_argument("--threshold", type=float, default=0.5, help="P(defect) threshold for binary classifier")
     p.add_argument("--device", choices=["auto", "cpu", "mps", "cuda"], default="auto")
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument(
+        "--report-dir",
+        type=Path,
+        default=OUTPUT_DIR / "end2end_reports",
+        help="Write per-image correct/wrong lists here",
+    )
+    p.add_argument("--max-print", type=int, default=50, help="Print up to this many items per list")
     args = p.parse_args()
 
     if args.device == "auto":
@@ -156,6 +164,9 @@ def main():
     y_pred = []
     unknown_idx = 1 + len(label_names)
 
+    correct_cases: List[Tuple[str, str, str]] = []  # (rel_path, true_label, pred_label)
+    wrong_cases: List[Tuple[str, str, str]] = []
+
     for i, rel in enumerate(rel_paths):
         img_path = args.dataset_root / rel
         # Determine true label: good or defectX
@@ -163,14 +174,17 @@ def main():
         if cls_name == "good":
             true_bin = 0
             true_sub = None
+            true_label_full = "good"
         else:
             true_bin = 1
             # map defectX to subclass index based on label_names
             # label_names are defect1, defect2, ...
             if cls_name in label_names:
                 true_sub = label_names.index(cls_name)
+                true_label_full = cls_name
             else:
                 true_sub = None
+                true_label_full = "defect_unknown"
 
         img = Image.open(img_path).convert("RGB")
         x = transform(img).unsqueeze(0).to(device)
@@ -250,6 +264,11 @@ def main():
         y_true.append(true_class_idx)
         y_pred.append(pred_class_idx)
 
+        if pred_label == true_label_full:
+            correct_cases.append((rel, true_label_full, pred_label))
+        else:
+            wrong_cases.append((rel, true_label_full, pred_label))
+
         if (i + 1) % 50 == 0 or (i + 1) == len(rel_paths):
             print(f"Processed {i+1}/{len(rel_paths)} images...", flush=True)
 
@@ -292,6 +311,31 @@ def main():
             f"  {cname}: precision={precision:.4f}, recall={recall:.4f}, "
             f"f1={f1:.4f}, support={support}"
         )
+
+    # Per-image correct/wrong lists
+    report_dir = args.report_dir
+    report_dir.mkdir(parents=True, exist_ok=True)
+    wrong_path = report_dir / "wrong_cases.txt"
+    correct_path = report_dir / "correct_cases.txt"
+
+    with wrong_path.open("w") as f:
+        for rel, t, p in wrong_cases:
+            f.write(f"{rel}\t{t}\t{p}\n")
+    with correct_path.open("w") as f:
+        for rel, t, p in correct_cases:
+            f.write(f"{rel}\t{t}\t{p}\n")
+
+    print(f"\nCorrect cases: {len(correct_cases)}")
+    print(f"Wrong cases:   {len(wrong_cases)}")
+    print(f"Report dir: {report_dir}")
+
+    print("\nWrong cases (preview):")
+    for rel, t, p in wrong_cases[: args.max_print]:
+        print(f"  {rel} | true={t} pred={p}")
+
+    print("\nCorrect cases (preview):")
+    for rel, t, p in correct_cases[: args.max_print]:
+        print(f"  {rel} | true={t} pred={p}")
 
     return 0
 
